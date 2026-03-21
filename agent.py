@@ -42,14 +42,14 @@ class AgentLoop:
     实现渐进披露的三级加载机制
     """
 
-    def __init__(self, registry: SkillRegistry):
-        self.registry = registry
+    def __init__(self, skill_registry: SkillRegistry):
+        self.skill_registry = skill_registry
         self.tools: Dict[str, Tool] = {}
         self.context: Dict[str, Any] = {}  # 当前激活的 Skill 上下文
         self.conversation_history: List[Dict] = []
 
         # 注册工具
-        self._register_tool(SkillTool(registry))
+        self._register_tool(SkillTool(skill_registry))
         self._register_tool(BashTool())
         self._register_tool(ReadFileTool())
 
@@ -63,7 +63,7 @@ class AgentLoop:
 
     def _build_system_prompt(self) -> str:
         """构建系统提示词（仅包含 Level 1 披露）"""
-        return base_system_prompt.format(skills_registry=self.registry.get_registry_prompt())
+        return base_system_prompt.format(skills_registry=self.skill_registry.get_registry_prompt())
 
     def _get_tool_schema(self):
         return [t.to_schema() for t in self.tools.values()]
