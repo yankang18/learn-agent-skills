@@ -4,13 +4,14 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from prompts import base_system_prompt
+from skill_env import setup_demo_environment
 from skills import SkillRegistry
 from tools import Tool, SkillTool, BashTool, ReadFileTool
 
 
-class AgentLoop(object):
+class MockAgent(object):
     """
-    Agent Loop - 模拟 Claude Code 的核心交互循环
+    Mock Agent - 模拟 Claude Code 的核心交互循环
     实现渐进披露的三级加载机制
     """
 
@@ -90,31 +91,33 @@ class AgentLoop(object):
         # ---------------------------------------------
         # Level 1 披露 - 系统提示词（仅元数据）
         # ---------------------------------------------
-
-        # Step 1: Level 1 披露 - 系统提示词（仅元数据）
+        # print("-" * 40)
+        # print("\n【Level 1 披露 - 系统提示词片段】")
+        # print("-" * 40)
+        print("\n" + "=" * 80)
+        print("Step 1: 启动加载 SKILL.md中的元数据【Level 1】")
+        print("=" * 80)
         system_prompt = self._get_system_prompt()
-        print("\n【Level 1 披露 - 系统提示词片段】")
-        print("-" * 40)
         print(self.registry.get_registry_prompt())
         print(f"\n[Token 消耗: 约 {len(system_prompt)} 字符（仅元数据）]")
 
         # ---------------------------------------------
         # Level 2
         # ---------------------------------------------
-
+        # print("-" * 40)
+        # print("\n【Level 2 披露 - 加载完整 SKILL.md】")
+        # print("-" * 40)
         # Step 2: 模型意图判断（已经注册了 Skill 工具）
         print("\n" + "=" * 80)
-        print("Step 2: 模型基于 Level 1 元数据判断意图")
+        print("Step 2: （模拟）模型基于 SKILL.md 元数据判断意图 【Level 2】")
         print("=" * 80)
         reasoning = self._model_inference(user_input)
         print(reasoning)
-
-        # Step 3: 如果匹配到技能（Skill），使用Skill工具加载对应技能的Skills.md
         tool_call = self._parse_model_output(reasoning)
         if tool_call and tool_call["tool"] == "Skill":
-            print("\n【Level 2 披露 - 加载完整 SKILL.md】")
-            print("-" * 40)
-
+            print("\n" + "=" * 80)
+            print("Step 3: 如果匹配到技能（Skill），使用Skill工具加载对应技能的Skills.md")
+            print("=" * 80)
             skill_tool = self.tools["Skill"]
             result = skill_tool.execute(**tool_call["params"])
 
@@ -135,13 +138,9 @@ class AgentLoop(object):
             readfile_tool = ReadFileTool(self.context)
             self._register_tool(readfile_tool)
 
-            # ---------------------------------------------
-            # Level 3
-            # ---------------------------------------------
-
             # Step 4: 执行 Skill 指令。模拟大模型执行 Skill 中的步骤.（通过工具调用）
             print("\n" + "=" * 80)
-            print("Step 4: 按 Skill 指令执行（Level 3 按需披露）")
+            print("Step 4: 按 Skill 指令执行【Level 3】")
             print("=" * 80)
 
             # 这里模拟大模型返回的结果是要调用3个工具
@@ -178,57 +177,6 @@ class AgentLoop(object):
         print("Level 3: 按需加载 - references/, scripts/ 等资源（执行时动态）")
 
 
-def setup_demo_environment():
-    """创建演示用的 Skill 文件结构"""
-    home = Path.cwd()
-    skills_dir = home / ".claude" / "skills" / "code-reviewer"
-    print(skills_dir)
-    skills_dir.mkdir(parents=True, exist_ok=True)
-
-    # 写入 SKILL.md
-    skill_md = skills_dir / "SKILL.md"
-    skill_md.write_text("""---
-name: code-reviewer
-description: 在代码提交前进行审查，检查潜在bug、性能问题和风格违规。当用户提到"review"、"审查代码"、"检查PR"或要求评估代码质量时触发。
-author: Claude Code Team
-version: 1.0
----
-
-## 工作流程
-
-1. 获取变更内容（`git diff`）
-2. **查阅规范**：读取 `references/style-guide.md`
-3. **执行检查**：运行 `bash scripts/lint.sh`
-4. 输出审查报告
-
-## 可用资源
-
-- 规范文档：`references/style-guide.md`
-- 检查脚本：`scripts/lint.sh`
-  """, encoding="utf-8")
-
-    # 写入 reference 文件（Level 3 资源）
-    refs_dir = skills_dir / "references"
-    refs_dir.mkdir(exist_ok=True)
-    (refs_dir / "style-guide.md").write_text("""# 编码规范
-- 行长度不超过 100 字符
-- 函数必须有 docstring
-- 变量使用 camelCase
-  """, encoding="utf-8")
-
-    # 写入脚本（Level 3 资源）
-    scripts_dir = skills_dir / "scripts"
-    scripts_dir.mkdir(exist_ok=True)
-    lint_script = scripts_dir / "lint.sh"
-    lint_script.write_text("""#!/bin/bash
-  echo "ERROR: utils.py:45 - Line too long (120 > 100)"
-  echo "WARNING: app.py:23 - Missing docstring"
-  """, encoding="utf-8")
-    lint_script.chmod(0o755)
-
-    return home / ".claude" / "skills"
-
-
 if __name__ == "__main__":
     # 设置演示环境
     print("初始化 Skill 环境...")
@@ -236,7 +184,7 @@ if __name__ == "__main__":
 
     # 创建 Agent
     registry = SkillRegistry(skills_dir)
-    agent = AgentLoop(registry)
+    agent = MockAgent(registry)
 
     # 运行示例：用户请求代码审查
     agent.run("帮我审查一下刚才提交的代码")
