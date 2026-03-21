@@ -83,7 +83,7 @@ class MockAgent(object):
         return f"[模型思考] 未匹配到特定 Skill，直接回应用户: {user_input}"
 
     def run(self, user_input: str):
-        """运行 Agent Loop，展示渐进披露全过程"""
+        """运行 Mock Agent，展示渐进披露全过程"""
         print("=" * 80)
         print(f"用户输入: {user_input}")
         print("=" * 80)

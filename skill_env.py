@@ -24,7 +24,6 @@ version: 1.0
 3. 输出审查报告
 
 ## 可用资源
-
 - 规范文档：`references/style-guide.md`
 - 检查脚本：`scripts/lint.sh`
   """, encoding="utf-8")

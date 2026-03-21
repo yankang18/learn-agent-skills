@@ -99,7 +99,7 @@ class ReadFileTool(Tool):
             file_path: str
     ) -> Dict[str, Any]:
         # 如果是相对路径，基于当前 Skill 的 Base Path 解析
-        if not file_path.startswith('/') and self.context.get('base_path'):
+        if not file_path.startswith('/') and self.context and self.context.get('base_path'):
             full_path = Path(self.context['base_path']) / file_path
         else:
             full_path = Path(file_path)
