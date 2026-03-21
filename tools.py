@@ -21,6 +21,11 @@ class Tool:
         if required:
             self.required = required
 
+        self.context = {}
+
+    def set_context(self, context:Dict[str, Any]):
+        self.context = context
+
     def execute(self, **kwargs) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -61,13 +66,13 @@ class SkillTool(Tool):
 
         if not skill:
             return {
-                "status": "error",
+                "status": "failed",
                 "message": f"Skill '{command}' 不存在"
             }
 
         # 返回内容包含 Base Path，用于后续 Level 3 引用解析
         return {
-            "status": "success",
+            "status": "succeed",
             "message": f"Launching skill: {command}",
             "command_name": command,
             "base_path": str(skill.base_path),
@@ -79,7 +84,7 @@ class SkillTool(Tool):
 class ReadFileTool(Tool):
     """ReadFile 工具 - 支持相对路径解析（Level 3 披露）"""
 
-    def __init__(self, current_context: Dict):
+    def __init__(self):
         super().__init__(
             name="ReadFile",
             description="读取文件内容。支持绝对路径或基于当前 Skill Base Path 的相对路径",
@@ -87,9 +92,12 @@ class ReadFileTool(Tool):
             required=["file_path"]
         )
         # self.registry = registry
-        self.context = current_context  # 当前执行的 Skill 上下文
+        # self.context = current_context  # 当前执行的 Skill 上下文
 
-    def execute(self, file_path: str) -> Dict[str, Any]:
+    def execute(
+            self,
+            file_path: str
+    ) -> Dict[str, Any]:
         # 如果是相对路径，基于当前 Skill 的 Base Path 解析
         if not file_path.startswith('/') and self.context.get('base_path'):
             full_path = Path(self.context['base_path']) / file_path
@@ -99,12 +107,12 @@ class ReadFileTool(Tool):
         if full_path.exists():
             content = full_path.read_text(encoding='utf-8')
             return {
-                "status": "success",
+                "status": "succeed",
                 "content": content,
                 "file_path": str(full_path)
             }
         return {
-            "status": "error",
+            "status": "failed",
             "message": f"文件不存在: {full_path}"
         }
 
@@ -120,7 +128,11 @@ class BashTool(Tool):
             required=["command"]
         )
 
-    def execute(self, command: str, description: str = "") -> Dict[str, Any]:
+    def execute(
+            self,
+            command: str,
+            description: str = ""
+    ) -> Dict[str, Any]:
         import subprocess
         try:
             result = subprocess.run(
@@ -131,7 +143,7 @@ class BashTool(Tool):
                 timeout=30
             )
             return {
-                "status": "success",
+                "status": "succeed",
                 "stdout": result.stdout,
                 "stderr": result.stderr,
                 "returncode": result.returncode,
@@ -139,6 +151,6 @@ class BashTool(Tool):
             }
         except Exception as e:
             return {
-                "status": "error",
+                "status": "failed",
                 "message": str(e)
             }
