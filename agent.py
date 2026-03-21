@@ -68,7 +68,10 @@ class AgentLoop:
     def _get_tool_schema(self):
         return [t.to_schema() for t in self.tools.values()]
 
-    def _model_inference(self, messages: List[Dict]) -> dict:
+    def _model_inference(
+            self,
+            messages: List[Dict]
+    ) -> dict:
         system_prompt = self._build_system_prompt()
         tool_schema = self._get_tool_schema()
         response = self.llm_client.inference(
@@ -135,11 +138,8 @@ class AgentLoop:
                 })
         return tool_messages
 
-    def run(self, user_input: str):
+    def run(self):
         """运行 Agent Loop，展示渐进披露全过程"""
-        print_info("=" * 80)
-        print_info(f"用户输入: {user_input}")
-        print_info("=" * 80)
 
         # ---------------------------------------------
         # Level 1
@@ -154,62 +154,86 @@ class AgentLoop:
         tool_schema = self._get_tool_schema()
         print(f"tool_schema: \n {json.dumps(tool_schema, ensure_ascii=False, indent=4)}")
 
-        # ---------------------------------------------
-        # Level 2
-        # ---------------------------------------------
-        print_info("\n" + "=" * 80)
-        print_info("Step 2: 模型基于用户输入和SKILL元数据判断意图【Level 2】")
-        print_info("=" * 80)
         messages: list[dict] = []
 
-        self.current_skill_context = {}
-
-        messages.append({
-            "role": "user",
-            "content": user_input,
-        })
-
         while True:
-            llm_response = self._model_inference(messages)
-            print("=" * 80 + ">")
-            print_info(f"LLM result:\n{json.dumps(llm_response, ensure_ascii=False, indent=4)}")
-            print("<" + "=" * 80)
-
-            status = llm_response["status"]
-            if status == "failed":
-                error_message = llm_response["error_message"]
-                print_info(f"\n{YELLOW}API Error: {error_message}{RESET}\n")
-                # 出错时回滚本轮所有消息到最近的 user 消息
-                while messages and messages[-1]["role"] != "user":
-                    messages.pop()
-                if messages:
-                    messages.pop()
+            # --- Step 1: 获取用户输入 ---
+            try:
+                user_input = input(colored_prompt()).strip()
+            except (KeyboardInterrupt, EOFError):
+                print(f"\n{DIM}再见.{RESET}")
                 break
 
-            # if status == "succeed":
-            content = llm_response["content"]
-            messages.append({"role": "assistant", "content": content})
-
-            stop_reason = llm_response["stop_reason"]
-            if stop_reason == "tool_calls":
-                tool_calls = llm_response["tools"]
-                tool_messages = self._execute_tools(tool_calls)
-                messages.extend(tool_messages)
-                # 继续内循环 -- 模型会看到工具结果并决定下一步
+            if not user_input:
                 continue
 
-            elif stop_reason == "stop":
-                if content:
-                    print_assistant(content)
-                self.current_skill_context = {}
-                # 跳出内循环, 等待下一次用户输入
+            if user_input.lower() in ("quit", "exit", "buy"):
+                print(f"{DIM}再见.{RESET}")
                 break
-            else:
-                print_info(f"[stop_reason={stop_reason}]")
-                self.current_skill_context = {}
-                if content:
-                    print_assistant(content)
-                break
+
+            self.current_skill_context = {}
+
+            print_info("=" * 80)
+            print_info(f"用户输入: {user_input}")
+            print_info("=" * 80)
+
+            messages.append({
+                "role": "user",
+                "content": user_input,
+            })
+
+            # --- Agent 内循环 ---
+            # 模型可能连续调用多个工具才最终给出文本回复.
+            # 用 while True 循环, 直到 stop_reason != "tool_calls"
+            while True:
+
+                # ---------------------------------------------
+                # Level 2
+                # ---------------------------------------------
+                print_info("\n" + "=" * 80)
+                print_info("Step 2: 模型基于用户输入和SKILL元数据判断意图【Level 2】")
+                print_info("=" * 80)
+
+                llm_response = self._model_inference(messages)
+                print("=" * 80 + ">")
+                print_info(f"LLM result:\n{json.dumps(llm_response, ensure_ascii=False, indent=4)}")
+                print("<" + "=" * 80)
+
+                status = llm_response["status"]
+                if status == "failed":
+                    error_message = llm_response["error_message"]
+                    print_info(f"\n{YELLOW}API Error: {error_message}{RESET}\n")
+                    # 出错时回滚本轮所有消息到最近的 user 消息
+                    while messages and messages[-1]["role"] != "user":
+                        messages.pop()
+                    if messages:
+                        messages.pop()
+                    break
+
+                # if status == "succeed":
+                content = llm_response["content"]
+                messages.append({"role": "assistant", "content": content})
+
+                stop_reason = llm_response["stop_reason"]
+                if stop_reason == "tool_calls":
+                    tool_calls = llm_response["tools"]
+                    tool_messages = self._execute_tools(tool_calls)
+                    messages.extend(tool_messages)
+                    # 继续内循环 -- 模型会看到工具结果并决定下一步
+                    continue
+
+                elif stop_reason == "stop":
+                    if content:
+                        print_assistant(content)
+                    self.current_skill_context = {}
+                    # 跳出内循环, 等待下一次用户输入
+                    break
+                else:
+                    print_info(f"[stop_reason={stop_reason}]")
+                    self.current_skill_context = {}
+                    if content:
+                        print_assistant(content)
+                    break
 
 
 if __name__ == "__main__":
@@ -222,7 +246,7 @@ if __name__ == "__main__":
     agent = AgentLoop(registry)
 
     # 运行示例：用户请求代码审查
-    agent.run("帮我审查一下刚才提交的代码")
+    agent.run()
     #
     # print("\n" + "=" * 80)
     # print("对比：如果没有渐进披露，系统提示词需要包含所有 Skill 的完整内容")
