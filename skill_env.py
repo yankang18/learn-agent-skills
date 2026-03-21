@@ -19,10 +19,9 @@ version: 1.0
 
 ## 工作流程
 执行代码审查时，严格遵循以下步骤：
-1. 获取变更内容（`git diff`）
-2. **查阅规范**：读取 `references/style-guide.md`
-3. **执行检查**：运行 `bash scripts/lint.sh`
-4. 输出审查报告
+1. **查阅规范**：读取 `references/style-guide.md`文件
+2. **执行检查**：运行 `bash scripts/lint.sh`脚本
+3. 输出审查报告
 
 ## 可用资源
 
