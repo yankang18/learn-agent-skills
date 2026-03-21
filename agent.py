@@ -77,8 +77,65 @@ class AgentLoop:
             tool_schema=tool_schema)
         return response
 
-    def run(self, user_input: str):
+    def _execute_tools(
+            self,
+            tool_calls: list[dict]
+    ) -> list[dict]:
+        tool_messages: list[dict] = []
+        for tool_call in tool_calls:
+            func_name = tool_call["function_name"]
+            arguments = tool_call["arguments"]
+            tool_call_id = tool_call["tool_call_id"]
 
+            if func_name.upper() == "SKILL":
+                skill_tool = self.tools["Skill"]
+                tool_result = skill_tool.execute(**arguments)
+                exec_status = tool_result["status"]
+
+                tool_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": str(tool_result)
+                })
+
+                if exec_status == "succeed":
+                    # 保存上下文（Base Path 是关键）
+                    skill_name = tool_result["command_name"]
+                    base_path = tool_result["base_path"]
+                    skill_content = tool_result["content"]
+
+                    self.current_skill_context = {
+                        "skill_name": skill_name,
+                        "base_path": base_path,
+                        "skill_content": skill_content
+                    }
+
+                    print_info(f"调用SKILL:")
+                    print_info(f"技能名称: {skill_name}")
+                    print_info(f"Base Path: {base_path}")
+                    print_info(f"内容长度: {len(skill_content)} 字符")
+                    print_info("\n【SKILL.md 内容（已注入上下文）】")
+                    print_info(skill_content[:500] + "..." if len(skill_content) > 500 else skill_content)
+
+            else:
+                # 执行工具
+                print_info(f"调用工具: {func_name}")
+                print_info(f"参数: {arguments}")
+                print_info(f"调用ID: {tool_call_id}")
+                tool = self.tools[func_name]
+                tool.set_context(self.current_skill_context)
+                tool_result = tool.execute(**arguments)
+
+                print_info(f"工具结果: {tool_result}")
+
+                tool_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": str(tool_result)
+                })
+        return tool_messages
+
+    def run(self, user_input: str):
         """运行 Agent Loop，展示渐进披露全过程"""
         print_info("=" * 80)
         print_info(f"用户输入: {user_input}")
@@ -113,7 +170,6 @@ class AgentLoop:
         })
 
         while True:
-
             llm_response = self._model_inference(messages)
             print("=" * 80 + ">")
             print_info(f"LLM result:\n{json.dumps(llm_response, ensure_ascii=False, indent=4)}")
@@ -137,58 +193,8 @@ class AgentLoop:
             stop_reason = llm_response["stop_reason"]
             if stop_reason == "tool_calls":
                 tool_calls = llm_response["tools"]
-                for tool_call in tool_calls:
-                    func_name = tool_call["function_name"]
-                    arguments = tool_call["arguments"]
-                    tool_call_id = tool_call["tool_call_id"]
-
-                    if func_name.upper() == "SKILL":
-                        skill_tool = self.tools["Skill"]
-                        tool_result = skill_tool.execute(**arguments)
-                        exec_status = tool_result["status"]
-
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call_id,
-                            "content": str(tool_result)
-                        })
-
-                        if exec_status == "succeed":
-                            # 保存上下文（Base Path 是关键）
-                            skill_name = tool_result["command_name"]
-                            base_path = tool_result["base_path"]
-                            skill_content = tool_result["content"]
-
-                            self.current_skill_context = {
-                                "skill_name": skill_name,
-                                "base_path": base_path,
-                                "skill_content": skill_content
-                            }
-
-                            print_info(f"调用SKILL:")
-                            print_info(f"技能名称: {skill_name}")
-                            print_info(f"Base Path: {base_path}")
-                            print_info(f"内容长度: {len(skill_content)} 字符")
-                            print_info("\n【SKILL.md 内容（已注入上下文）】")
-                            print_info(skill_content[:500] + "..." if len(skill_content) > 500 else skill_content)
-
-                    else:
-                        # 执行工具
-                        print_info(f"调用工具: {func_name}")
-                        print_info(f"参数: {arguments}")
-                        print_info(f"调用ID: {tool_call_id}")
-                        tool = self.tools[func_name]
-                        tool.set_context(self.current_skill_context)
-                        tool_result = tool.execute(**arguments)
-
-                        print_info(f"工具结果: {tool_result}")
-
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call_id,
-                            "content": str(tool_result)
-                        })
-
+                tool_messages = self._execute_tools(tool_calls)
+                messages.extend(tool_messages)
                 # 继续内循环 -- 模型会看到工具结果并决定下一步
                 continue
 
