@@ -91,8 +91,6 @@ class ReadFileTool(Tool):
             params={"file_path": {"type": "string"}},
             required=["file_path"]
         )
-        # self.registry = registry
-        # self.context = current_context  # 当前执行的 Skill 上下文
 
     def execute(
             self,

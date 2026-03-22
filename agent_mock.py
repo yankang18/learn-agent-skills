@@ -128,7 +128,8 @@ class MockAgent(object):
             print(result['content'][:500] + "..." if len(result['content']) > 500 else result['content'])
 
             # 现在创建 ReadFile 工具（绑定当前 Base Path）
-            readfile_tool = ReadFileTool(self.context)
+            readfile_tool = ReadFileTool()
+            readfile_tool.set_context(self.context)
             self._register_tool(readfile_tool)
 
             # ---------------------------------------------
