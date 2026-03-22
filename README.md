@@ -1,6 +1,6 @@
 # SkillPD
 
-**Skill Progressive Disclosure** - 渐进披露架构的 AI Agent 框架，通过三级加载机制降低大模型上下文 Token 消耗。也能使Agent能够集中注意力做正确的事。
+**Skill Progressive Disclosure** - 渐进披露架构的 AI Agent 框架，通过三级加载机制降低大模型上下文 Token 消耗。也能够帮助Agent集中注意力做正确的事。
 
 ## 核心概念
 
