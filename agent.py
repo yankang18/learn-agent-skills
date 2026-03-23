@@ -45,7 +45,6 @@ class AgentLoop:
     def __init__(self, skill_registry: SkillRegistry):
         self.skill_registry = skill_registry
         self.tools: Dict[str, Tool] = {}
-        self.context: Dict[str, Any] = {}  # 当前激活的 Skill 上下文
         self.conversation_history: List[Dict] = []
 
         # 注册工具
@@ -56,7 +55,7 @@ class AgentLoop:
         # 初始化LLM
         self.llm_client = LLMClient()
 
-        self.current_skill_context = {}
+        self.current_skill_context: Dict[str, Any] = {}  # 当前激活的 Skill 上下文
 
     def _register_tool(self, tool: Tool):
         self.tools[tool.name] = tool
@@ -178,10 +177,7 @@ class AgentLoop:
             print_info(f"用户输入: {user_input}")
             print_info("=" * 80)
 
-            messages.append({
-                "role": "user",
-                "content": user_input,
-            })
+            messages.append({"role": "user", "content": user_input})
 
             # --- Agent 内循环 ---
             # 模型可能连续调用多个工具才最终给出文本回复.
