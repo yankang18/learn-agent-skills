@@ -1,6 +1,6 @@
 # Nano Agent Skills
 
-**Nano Agent Skills ** 是一个以教学为目的的微项目，使用最少的依赖库（Python 标准库 + OpenAI）来实现Progressive Disclosure，帮助大家更好的理解Progressive Disclosure。
+**Nano Agent Skills** 是一个以教学为目的的微项目，使用最少的依赖库（Python 标准库 + OpenAI）来实现Progressive Disclosure，帮助大家更好的理解Progressive Disclosure。
 
 ## 核心概念
 
